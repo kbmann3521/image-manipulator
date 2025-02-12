@@ -1,8 +1,12 @@
-// index.js - Simple Node.js Script
+const express = require('express');
+const app = express();
+const port = 3000; // You can change this if needed
 
-function getCurrentDateTime() {
+app.get('/api/datetime', (req, res) => {
     const now = new Date();
-    return now.toLocaleString();
-}
+    res.json({ datetime: now.toLocaleString() });
+});
 
-console.log("Hello! The current date and time is:", getCurrentDateTime());
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
