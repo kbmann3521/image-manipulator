@@ -12,17 +12,6 @@ app.use(cors());
 // Middleware to parse JSON body
 app.use(express.json());
 
-// Basic route
-app.get('/', (req, res) => {
-    res.send('API is running! Access /api/time for the current time or /api/compress-image to process an image.');
-});
-
-// API endpoint to get current date and time
-app.get('/api/time', (req, res) => {
-    const now = new Date().toLocaleString();
-    res.json({ message: "Hello!", currentDateTime: now });
-});
-
 // API to fetch, resize, and compress an image from a URL
 app.post('/api/compress-image', async (req, res) => {
     try {
