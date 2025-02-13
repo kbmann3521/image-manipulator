@@ -21,13 +21,21 @@ app.post('/api/compress-image', async (req, res) => {
             return res.status(400).json({ error: "Image URL is required." });
         }
 
+        // Set default quality if not provided
+        const finalQuality = quality || 100;
+
         // Fetch image from URL
         const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
 
-        // Process image with sharp
+        // Process image with sharp (using Lanczos for resampling, lossless compression)
         const processedImage = await sharp(response.data)
-            .resize(width || 800, height || 800, { fit: 'inside' }) // Default to 800px max
-            .jpeg({ quality: quality || 80 }) // Default quality to 80%
+            .resize({
+                width: Math.min(width || 12000, 12000),
+                height: Math.min(height || 12000, 12000),
+                fit: 'inside', // Ensure the image fits within the max dimensions
+                kernel: 'lanczos3', // Use Lanczos3 resampling
+            })
+            .jpeg({ quality: finalQuality, progressive: true, optimizeScans: true }) // Lossless compression for JPEG
             .toBuffer();
 
         // Set response headers
