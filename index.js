@@ -2,18 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const sharp = require('sharp');
-const Replicate = require('replicate');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Get Replicate API token from environment variable
-const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
-
-// Initialize Replicate client
-const replicate = new Replicate({
-    auth: REPLICATE_API_TOKEN,
-});
 
 // Enable CORS
 app.use(cors());
@@ -21,7 +12,7 @@ app.use(cors());
 // Middleware to parse JSON body
 app.use(express.json());
 
-// API to fetch, upscale, resize, and compress an image from a URL
+// API to fetch, resize, and compress an image from a URL
 app.post('/api/compress-image', async (req, res) => {
     try {
         const { imageUrl, width, height, quality } = req.body;
@@ -36,35 +27,18 @@ app.post('/api/compress-image', async (req, res) => {
         // Fetch image from URL
         const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
 
-        // Step 1: Upscale the image 10x using Replicate's Real-ESRGAN model
-        const input = {
-            image: response.data, // Image fetched from URL
-            scale: 10, // Upscaling factor
-        };
-
-        const output = await replicate.run(
-            "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa", 
-            { input }
-        );
-
-        // The output is a URL to the upscaled image (Replicate returns a URL for the image)
-        const upscaledImageUrl = output;
-
-        // Fetch the upscaled image from Replicate
-        const upscaledImageResponse = await axios.get(upscaledImageUrl, { responseType: 'arraybuffer' });
-
-        // Step 2: Resize and compress the image using sharp
-        const processedImage = await sharp(upscaledImageResponse.data)
+        // Process image with sharp (using Lanczos for resampling, lossless compression)
+        const processedImage = await sharp(response.data)
             .resize({
                 width: Math.min(width || 12000, 12000),
                 height: Math.min(height || 12000, 12000),
-                fit: 'inside',
-                kernel: 'lanczos3',
+                fit: 'inside', // Ensure the image fits within the max dimensions
+                kernel: 'lanczos3', // Use Lanczos3 resampling
             })
-            .jpeg({ quality: finalQuality, progressive: true, optimizeScans: true })
+            .jpeg({ quality: finalQuality, progressive: true, optimizeScans: true }) // Lossless compression for JPEG
             .toBuffer();
 
-        // Set response headers and send the processed image
+        // Set response headers
         res.set('Content-Type', 'image/jpeg');
         res.send(processedImage);
     } catch (error) {
@@ -75,5 +49,5 @@ app.post('/api/compress-image', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(Server is running on port ${PORT});
 });
