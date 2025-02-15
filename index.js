@@ -44,7 +44,7 @@ app.post('/upscale-image', async (req, res) => {
     const compressedImagePath = 'compressed-image.png';
     await sharp(tempPath)
       .resize({ fit: 'inside' })  // Optional: Resize to ensure it's inside a bounding box
-      .samplingAlgorithm('lanczos3')  // Apply Lanczos resampling
+      .kernel('lanczos3')  // Apply Lanczos resampling
       .toFormat('png', { quality: 80 })  // Adjust quality to your needs (80% quality for PNG)
       .toFile(compressedImagePath);
 
