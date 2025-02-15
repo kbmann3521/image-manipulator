@@ -1,53 +1,59 @@
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const sharp = require('sharp');
+require("dotenv").config();
+const express = require("express");
+const Replicate = require("replicate");
+const axios = require("axios");
+const { writeFile } = require("fs/promises");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Enable CORS
-app.use(cors());
+const port = 3000; // Change if needed
+const replicate = new Replicate();
 
 // Middleware to parse JSON body
 app.use(express.json());
 
-// API to fetch, resize, and compress an image from a URL
-app.post('/api/compress-image', async (req, res) => {
+app.post("/api/compress-image", async (req, res) => {
     try {
-        const { imageUrl, width, height, quality } = req.body;
+        const { imageUrl, scale } = req.body;
 
         if (!imageUrl) {
-            return res.status(400).json({ error: "Image URL is required." });
+            return res.status(400).json({ error: "Missing imageUrl parameter." });
         }
 
-        // Set default quality if not provided
-        const finalQuality = quality || 100;
+        console.log(`Received request to upscale: ${imageUrl}`);
 
-        // Fetch image from URL
-        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        // Define input for the model
+        const input = {
+            image: imageUrl,
+            scale: scale || 2 // Default scale is 2
+        };
 
-        // Process image with sharp (using Lanczos for resampling, lossless compression)
-        const processedImage = await sharp(response.data)
-            .resize({
-                width: Math.min(width || 12000, 12000),
-                height: Math.min(height || 12000, 12000),
-                fit: 'inside', // Ensure the image fits within the max dimensions
-                kernel: 'lanczos3', // Use Lanczos3 resampling
-            })
-            .jpeg({ quality: finalQuality, progressive: true, optimizeScans: true }) // Lossless compression for JPEG
-            .toBuffer();
+        // Run the model on Replicate
+        const output = await replicate.run(
+            "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
+            { input }
+        );
 
-        // Set response headers
-        res.set('Content-Type', 'image/jpeg');
-        res.send(processedImage);
+        console.log("Image upscaled successfully. Downloading...");
+
+        // Download the upscaled image
+        const response = await axios.get(output, { responseType: "arraybuffer" });
+
+        // Save the image to the server (optional)
+        const outputPath = path.join(__dirname, "output.png");
+        await writeFile(outputPath, response.data);
+
+        console.log("Upscaled image saved.");
+
+        // Send the image URL or file as response
+        res.json({ success: true, upscaledImageUrl: output });
+
     } catch (error) {
-        console.error('Error processing image:', error);
-        res.status(500).json({ error: 'Failed to process the image.' });
+        console.error("Error upscaling image:", error.message);
+        res.status(500).json({ error: "Failed to upscale image." });
     }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
 });
