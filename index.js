@@ -1,5 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
+const sharp = require('sharp'); // Add sharp for image processing
 const { writeFile } = require('fs/promises');
 
 // Initialize express app
@@ -14,7 +15,7 @@ const replicate = new Replicate({
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Define the endpoint to upscale images
+// Define the endpoint to upscale and compress images
 app.post('/upscale-image', async (req, res) => {
   const { image, scale } = req.body;
 
@@ -28,17 +29,35 @@ app.post('/upscale-image', async (req, res) => {
   };
 
   try {
+    // Run image upscaling with Replicate
     const output = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
 
-    // Save the output image to disk or send it as a response
-    await writeFile("output.png", output);
-    console.log("Output saved to output.png");
+    // Save the upscaled image temporarily
+    const tempImagePath = 'temp-upscaled-image.png';
+    await writeFile(tempImagePath, output);
+    console.log("Upscaled image saved temporarily");
 
-    // Optionally, send the result back as a download or as a URL
-    res.download('output.png', 'upscaled-image.png');
+    // Compress the upscaled image using sharp with Lanczos filter
+    const compressedImageBuffer = await sharp(tempImagePath)
+      .resize({ 
+        // You can adjust the width or height, depending on your use case
+        width: 800, // Example width, adjust accordingly
+        height: 800, // Example height, adjust accordingly
+        fit: sharp.fit.inside, // Maintains aspect ratio
+        kernel: sharp.kernel.lanczos3, // Use Lanczos filter for resizing
+      })
+      .toBuffer();
+
+    // Save the compressed image
+    const compressedImagePath = 'compressed-upscaled-image.png';
+    await writeFile(compressedImagePath, compressedImageBuffer);
+    console.log("Compressed image saved");
+
+    // Send the compressed image back as a download
+    res.download(compressedImagePath, 'compressed-upscaled-image.png');
   } catch (error) {
     console.error('Error during prediction:', error);
     res.status(500).send('Internal Server Error');
