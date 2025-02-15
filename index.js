@@ -1,12 +1,9 @@
-// index.js
-
-require("dotenv").config(); // Load environment variables from .env file
-const Replicate = require("replicate"); // Import Replicate
+const Replicate = require("replicate");
 const { writeFile } = require("fs/promises");
 
 // Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY, // API key from .env file
+  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets
 });
 
 async function upscaleAndProcessImage() {
