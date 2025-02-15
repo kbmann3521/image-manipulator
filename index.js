@@ -1,61 +1,65 @@
+// index.js
+
 const Replicate = require("replicate");
 const fs = require("fs");
 const path = require("path");
-const sharp = require("sharp");
+const sharp = require("sharp"); // Used for resizing and compressing images
 const axios = require("axios");
 
 const replicate = new Replicate({
-  auth: 'r8_YMlK3bDOUurLxlMVOTWGZdRaXcxEDIl2G1EM2', // Your Replicate API key
+  auth: "r8_JZKSFowZllejfsULUalBZQOSlXdfSgQ4fNtaV", // Directly using the API token
 });
 
-const upscaleImage = async (imageUrl) => {
+const inputImagePath = "path/to/your/input/image.jpg"; // Path to your image
+
+async function upscaleAndResizeImage() {
   try {
-    // Step 1: Upscale the image using Replicate API
-    const input = {
-      image: imageUrl,
-      scale: 2, // Upscale 2x
-    };
+    // Step 1: Upload image to Replicate for upscaling
+    const imageUrl = await uploadImage(inputImagePath); // Upload image to a server
 
-    const modelVersion = "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa"; // Adjust model version accordingly
-    const output = await replicate.run(modelVersion, { input });
-
-    // Step 2: Save the upscaled image to a local file (temporary)
-    const outputFile = path.join(__dirname, 'upscaled-image.png');
-    const writer = fs.createWriteStream(outputFile);
-    const response = await axios({ url: output, responseType: 'stream' });
-    response.data.pipe(writer);
-
-    // Wait for file to be written
-    await new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
-
-    console.log('Upscaled image saved successfully at:', outputFile);
+    const output = await replicate.run(
+      "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa", 
+      {
+        input: {
+          image: imageUrl, // URL of the image to upscale
+          scale: 2, // 2x upscale
+        }
+      }
+    );
     
+    console.log("Upscaled Image URL: ", output);
+
+    // Step 2: Download the upscaled image
+    const upscaledImageUrl = output; // Get the URL of the upscaled image
+    const upscaledImageBuffer = await axios.get(upscaledImageUrl, { responseType: "arraybuffer" });
+
     // Step 3: Resize and compress the image using sharp
-    const compressedFilePath = path.join(__dirname, 'compressed-image.jpg');
-    await sharp(outputFile)
-      .resize(800) // Resize to width of 800px (adjust as needed)
-      .jpeg({ quality: 80 }) // Compress to 80% quality
-      .toFile(compressedFilePath);
+    const resizedImagePath = path.join(__dirname, "resized_compressed_image.jpg");
+    await sharp(upscaledImageBuffer.data)
+      .resize(800, 800) // Resize to 800x800 (adjust as necessary)
+      .jpeg({ quality: 80 }) // Compress the image to 80% quality
+      .toFile(resizedImagePath);
 
-    console.log('Resized and compressed image saved at:', compressedFilePath);
+    console.log("Image has been resized and compressed:", resizedImagePath);
 
-    // Return the final path
-    return compressedFilePath;
   } catch (error) {
-    console.error("Error in image processing:", error);
+    console.error("Error processing image:", error);
+  }
+}
+
+// Helper function to upload image to a server (e.g., Cloud storage or your server)
+async function uploadImage(imagePath) {
+  try {
+    const imageBuffer = fs.readFileSync(imagePath);
+    // Upload the image to your server or cloud storage, and return the URL
+    // This is a placeholder, replace with actual upload code
+    const uploadedImageUrl = "https://your-server-url.com/path-to-image";
+    return uploadedImageUrl;
+  } catch (error) {
+    console.error("Error uploading image:", error);
     throw error;
   }
-};
+}
 
-// Example Usage: Upscaling and compressing an image from a URL
-const imageUrl = 'https://example.com/your-image.jpg'; // Replace with your actual image URL
-upscaleImage(imageUrl)
-  .then((finalImagePath) => {
-    console.log('Final image path:', finalImagePath);
-  })
-  .catch((err) => {
-    console.error("Error:", err);
-  });
+// Run the function
+upscaleAndResizeImage();
