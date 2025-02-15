@@ -1,5 +1,4 @@
 const Replicate = require("replicate");
-const replicate = new Replicate();
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
