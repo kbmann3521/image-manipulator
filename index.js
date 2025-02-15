@@ -5,7 +5,7 @@ const sharp = require("sharp");
 const axios = require("axios");
 
 const replicate = new Replicate({
-  auth: 'r8_9HGPhGJozVbFy5a9Qhc8UAuXgnNSMAn2b9uY6', // Your Replicate API key
+  Authorization: 'r8_JBSaZ28KoJxPcTDNSq8guyXrhubvLDw4gGiEU', // Your Replicate API key
 });
 
 const upscaleImage = async (imageUrl) => {
