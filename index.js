@@ -1,48 +1,44 @@
+const express = require("express");
 const Replicate = require("replicate");
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 const axios = require("axios");
 
+const app = express();
+app.use(express.json());
+
 const replicate = new Replicate({
   auth: 'r8_JmA8oO0W7PkTdHO0v4wWnWmNEThahuB1yXtqn', // Your Replicate API key
 });
 
+// Function to upscale, resize, and compress the image
 const upscaleImage = async (imageUrl) => {
   try {
-    // Step 1: Upscale the image using Replicate API
     const input = {
       image: imageUrl,
-      scale: 2, // Upscale 2x
+      scale: 2,
     };
 
-    const modelVersion = "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa"; // Adjust model version accordingly
+    const modelVersion = "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa";
     const output = await replicate.run(modelVersion, { input });
 
-    // Step 2: Save the upscaled image to a local file (temporary)
     const outputFile = path.join(__dirname, 'upscaled-image.png');
     const writer = fs.createWriteStream(outputFile);
     const response = await axios({ url: output, responseType: 'stream' });
     response.data.pipe(writer);
 
-    // Wait for file to be written
     await new Promise((resolve, reject) => {
       writer.on('finish', resolve);
       writer.on('error', reject);
     });
 
-    console.log('Upscaled image saved successfully at:', outputFile);
-    
-    // Step 3: Resize and compress the image using sharp
     const compressedFilePath = path.join(__dirname, 'compressed-image.jpg');
     await sharp(outputFile)
-      .resize(800) // Resize to width of 800px (adjust as needed)
-      .jpeg({ quality: 80 }) // Compress to 80% quality
+      .resize(800)
+      .jpeg({ quality: 80 })
       .toFile(compressedFilePath);
 
-    console.log('Resized and compressed image saved at:', compressedFilePath);
-
-    // Return the final path
     return compressedFilePath;
   } catch (error) {
     console.error("Error in image processing:", error);
@@ -50,12 +46,24 @@ const upscaleImage = async (imageUrl) => {
   }
 };
 
-// Example Usage: Upscaling and compressing an image from a URL
-const imageUrl = 'https://example.com/your-image.jpg'; // Replace with your actual image URL
-upscaleImage(imageUrl)
-  .then((finalImagePath) => {
-    console.log('Final image path:', finalImagePath);
-  })
-  .catch((err) => {
-    console.error("Error:", err);
-  });
+// Endpoint to handle incoming requests
+app.post("/upscale", async (req, res) => {
+  const { imageUrl } = req.body;
+
+  if (!imageUrl) {
+    return res.status(400).json({ error: "Image URL is required" });
+  }
+
+  try {
+    const finalImagePath = await upscaleImage(imageUrl);
+    res.status(200).json({ message: "Image processed successfully", finalImagePath });
+  } catch (err) {
+    res.status(500).json({ error: "An error occurred while processing the image", details: err.message });
+  }
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
