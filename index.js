@@ -17,38 +17,22 @@ app.use(express.json());
 
 // Define the endpoint to upscale and compress images
 app.post('/upscale-image', async (req, res) => {
-  const { image } = req.body;
+  const { image, scale } = req.body;
 
-  if (!image || typeof image !== 'string') {
-    return res.status(400).send('A valid image URL is required');
+  if (!image || !scale) {
+    return res.status(400).send('Image URL and scale factor are required');
   }
 
+  const input = { image, scale };
+
   try {
-    let input = { image, scale: 4 };
-
-    // First upscale
-    const firstOutput = await replicate.run(
+    const output = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
-
-    if (!firstOutput || typeof firstOutput !== 'string') {
-      throw new Error('Invalid response from first upscale');
-    }
-
-    // Second upscale
-    input.image = firstOutput;
-    const secondOutput = await replicate.run(
-      "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
-      { input }
-    );
-
-    if (!secondOutput || typeof secondOutput !== 'string') {
-      throw new Error('Invalid response from second upscale');
-    }
 
     // Fetch the upscaled image
-    const imageBuffer = await fetch(secondOutput).then(res => res.arrayBuffer());
+    const imageBuffer = await fetch(output).then(res => res.arrayBuffer());
 
     // Compress the image using sharp
     const compressedImage = await sharp(Buffer.from(imageBuffer))
