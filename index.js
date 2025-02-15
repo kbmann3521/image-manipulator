@@ -29,32 +29,20 @@ app.post('/upscale-image', async (req, res) => {
   };
 
   try {
-    // Step 1: First upscale (4x)
-    let output = await replicate.run(
+    // Upscale the image using Replicate
+    const output = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
 
-    // Save the first upscale output temporarily before the second upscale
-    const tempPath1 = 'upscaled-first.png';
-    await writeFile(tempPath1, output);
-    console.log("First upscale complete, saved to upscaled-first.png");
+    // Save the output image temporarily before compression
+    const tempPath = 'upscaled-image.png';
+    await writeFile(tempPath, output);
+    console.log("Output saved to upscaled-image.png");
 
-    // Step 2: Second upscale (4x again, to make it 8x total)
-    input.image = tempPath1; // Use the first upscaled image as input for the second upscale
-    output = await replicate.run(
-      "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
-      { input }
-    );
-
-    // Save the second upscale output
-    const tempPath2 = 'upscaled-second.png';
-    await writeFile(tempPath2, output);
-    console.log("Second upscale complete, saved to upscaled-second.png");
-
-    // Compress the final upscaled image using Sharp
+    // Compress the image using Sharp with Lanczos resampling
     const compressedImagePath = 'compressed-image.png';
-    await sharp(tempPath2)
+    await sharp(tempPath)
       .resize({ fit: 'inside' })  // Optional: Resize to ensure it's inside a bounding box
       .samplingAlgorithm('lanczos3')  // Apply Lanczos resampling
       .toFormat('png', { quality: 80 })  // Adjust quality to your needs (80% quality for PNG)
