@@ -1,8 +1,8 @@
-import express from 'express';
-import axios from 'axios';
-import Replicate from 'replicate';
-import { writeFile } from 'node:fs/promises';
-import path from 'path';
+const express = require('express');
+const axios = require('axios');
+const Replicate = require('replicate');
+const { writeFile } = require('node:fs/promises');
+const path = require('path');
 
 const app = express();
 app.use(express.json()); // to parse JSON bodies
