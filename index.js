@@ -1,11 +1,12 @@
 const Replicate = require("replicate");
+const replicate = new Replicate();
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 const axios = require("axios");
 
 const replicate = new Replicate({
-  auth: 'r8_D4tTAGZLFr85F9mEN3dgW2NhVkB03ET3jtUpn', // Your Replicate API key
+  auth: 'r8_9HGPhGJozVbFy5a9Qhc8UAuXgnNSMAn2b9uY6', // Your Replicate API key
 });
 
 const upscaleImage = async (imageUrl) => {
