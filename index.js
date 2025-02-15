@@ -15,13 +15,13 @@ const runModel = async () => {
       scale: 2,
     };
 
-    // Run the model
+    // Run the model without using events
     const output = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
 
-    // Write the output to a file
+    // Save the result to a file
     await writeFile("output.png", output);
 
     console.log("Output image saved as output.png");
