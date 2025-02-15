@@ -1,11 +1,12 @@
 // index.js
 
-const Replicate = require("replicate"); // Using CommonJS require
+require("dotenv").config(); // Load environment variables from .env file
+const Replicate = require("replicate"); // Import Replicate
 const { writeFile } = require("fs/promises");
 
-// Initialize replicate with your API key directly
+// Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
-  auth: "r8_3m3FmIyGV9B2hQ4V6f9pC0saQqlHYdT29P0g2", // Your API key
+  auth: process.env.REPLICATE_API_KEY, // API key from .env file
 });
 
 async function upscaleAndProcessImage() {
