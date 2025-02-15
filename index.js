@@ -1,4 +1,3 @@
-require("dotenv").config();
 const express = require("express");
 const Replicate = require("replicate");
 const axios = require("axios");
@@ -7,9 +6,12 @@ const path = require("path");
 
 const app = express();
 const port = 3000; // Change if needed
-const replicate = new Replicate();
 
-// Middleware to parse JSON body
+// Access API key from GitHub secrets (or environment variables)
+const replicate = new Replicate({
+    auth: process.env.REPLICATE_API_TOKEN
+});
+
 app.use(express.json());
 
 app.post("/api/compress-image", async (req, res) => {
