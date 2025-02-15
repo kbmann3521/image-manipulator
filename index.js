@@ -1,7 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { writeFile } = require('fs/promises');
-const sharp = require('sharp');  // Import Sharp for image processing
 
 // Initialize express app
 const app = express();
@@ -15,7 +14,7 @@ const replicate = new Replicate({
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Define the endpoint to upscale and compress images
+// Define the endpoint to upscale images
 app.post('/upscale-image', async (req, res) => {
   const { image, scale } = req.body;
 
@@ -29,31 +28,19 @@ app.post('/upscale-image', async (req, res) => {
   };
 
   try {
-    // Upscale the image using Replicate
     const output = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
 
-    // Save the output image temporarily before compression
-    const tempPath = 'upscaled-image.png';
-    await writeFile(tempPath, output);
-    console.log("Output saved to upscaled-image.png");
+    // Save the output image to disk or send it as a response
+    await writeFile("output.png", output);
+    console.log("Output saved to output.png");
 
-    // Compress the image using Sharp with Lanczos resampling
-    const compressedImagePath = 'compressed-image.png';
-    await sharp(tempPath)
-      .resize({ fit: 'inside' })  // Optional: Resize to ensure it's inside a bounding box
-      .kernel('lanczos3')  // Apply Lanczos resampling
-      .toFormat('png', { quality: 80 })  // Adjust quality to your needs (80% quality for PNG)
-      .toFile(compressedImagePath);
-
-    console.log('Image compressed using Lanczos resampling');
-
-    // Send the compressed image as a download
-    res.download(compressedImagePath, 'compressed-upscaled-image.png');
+    // Optionally, send the result back as a download or as a URL
+    res.download('output.png', 'upscaled-image.png');
   } catch (error) {
-    console.error('Error during prediction or compression:', error);
+    console.error('Error during prediction:', error);
     res.status(500).send('Internal Server Error');
   }
 });
