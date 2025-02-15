@@ -1,5 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
+const sharp = require('sharp'); // Import sharp for image compression
 const { writeFile } = require('fs/promises');
 
 // Initialize express app
@@ -14,8 +15,8 @@ const replicate = new Replicate({
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Define the endpoint to upscale images
-app.post('/upscale-image', async (req, res) => {
+// Define the endpoint to upscale and compress images
+app.post('/upscale-and-compress-image', async (req, res) => {
   const { image, scale } = req.body;
 
   if (!image || !scale) {
@@ -28,19 +29,26 @@ app.post('/upscale-image', async (req, res) => {
   };
 
   try {
+    // Step 1: Upscale the image using Replicate
     const output = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
 
-    // Save the output image to disk or send it as a response
-    await writeFile("output.png", output);
-    console.log("Output saved to output.png");
+    // Step 2: Compress the image using Lanczos algorithm (sharp)
+    const compressedImageBuffer = await sharp(Buffer.from(output))
+      .resize({ fit: sharp.fit.inside, kernel: sharp.kernel.lanczos3 })
+      .jpeg({ quality: 80 }) // Set quality for compression (0 to 100)
+      .toBuffer(); // Get the compressed image as a buffer
 
-    // Optionally, send the result back as a download or as a URL
-    res.download('output.png', 'upscaled-image.png');
+    // Save the compressed image to disk
+    await writeFile("output-compressed.jpg", compressedImageBuffer);
+    console.log("Compressed output saved to output-compressed.jpg");
+
+    // Send the compressed image back as a download
+    res.download('output-compressed.jpg', 'compressed-upscaled-image.jpg');
   } catch (error) {
-    console.error('Error during prediction:', error);
+    console.error('Error during prediction or compression:', error);
     res.status(500).send('Internal Server Error');
   }
 });
