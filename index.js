@@ -19,8 +19,8 @@ app.use(express.json());
 app.post('/upscale-image', async (req, res) => {
   const { image } = req.body;
 
-  if (!image) {
-    return res.status(400).send('Image URL is required');
+  if (!image || typeof image !== 'string') {
+    return res.status(400).send('A valid image URL is required');
   }
 
   try {
@@ -32,12 +32,20 @@ app.post('/upscale-image', async (req, res) => {
       { input }
     );
 
+    if (!firstOutput || typeof firstOutput !== 'string') {
+      throw new Error('Invalid response from first upscale');
+    }
+
     // Second upscale
     input.image = firstOutput;
     const secondOutput = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
+
+    if (!secondOutput || typeof secondOutput !== 'string') {
+      throw new Error('Invalid response from second upscale');
+    }
 
     // Fetch the upscaled image
     const imageBuffer = await fetch(secondOutput).then(res => res.arrayBuffer());
