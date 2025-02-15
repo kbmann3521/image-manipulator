@@ -1,15 +1,30 @@
-const Replicate = require("replicate");
-const { writeFile } = require("fs/promises");
+const express = require('express');
+const Replicate = require('replicate');
+const { writeFile } = require('fs/promises');
+
+// Initialize express app
+const app = express();
+const port = process.env.PORT || 3000; // Default to port 3000
 
 // Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets
+  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
 });
 
-async function upscaleAndProcessImage() {
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+// Define the endpoint to upscale images
+app.post('/upscale-image', async (req, res) => {
+  const { image, scale } = req.body;
+
+  if (!image || !scale) {
+    return res.status(400).send('Image URL and scale factor are required');
+  }
+
   const input = {
-    image: "https://replicate.delivery/pbxt/Ing7Fa4YMk6YtcoG1YZnaK3UwbgDB5guRc5M2dEjV6ODNLMl/cat.jpg",
-    scale: 2,
+    image,
+    scale,
   };
 
   try {
@@ -18,13 +33,19 @@ async function upscaleAndProcessImage() {
       { input }
     );
 
-    // Save the output image to disk
+    // Save the output image to disk or send it as a response
     await writeFile("output.png", output);
     console.log("Output saved to output.png");
-  } catch (error) {
-    console.error("Error during prediction:", error);
-  }
-}
 
-// Run the function
-upscaleAndProcessImage();
+    // Optionally, send the result back as a download or as a URL
+    res.download('output.png', 'upscaled-image.png');
+  } catch (error) {
+    console.error('Error during prediction:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
