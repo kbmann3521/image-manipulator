@@ -1,7 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { writeFile, readFile } = require('fs/promises');
-const sharp = require('sharp');
 
 // Initialize express app
 const app = express();
@@ -31,19 +30,12 @@ app.post('/upscale-image', async (req, res) => {
       { input }
     );
 
-    // Fetch the upscaled image
-    const imageBuffer = await fetch(output).then(res => res.arrayBuffer());
+    // Log the raw JSON output from the model
+    console.log("Raw JSON output:", output);
 
-    // Compress the image using sharp
-    const compressedImage = await sharp(Buffer.from(imageBuffer))
-      .jpeg({ quality: 80 }) // Adjust quality as needed
-      .toBuffer();
+    // Send the raw JSON output back in the response
+    res.json(output);  // This sends the raw prediction JSON
 
-    await writeFile("compressed-output.jpg", compressedImage);
-    console.log("Compressed output saved to compressed-output.jpg");
-
-    // Send the compressed image as a download
-    res.download('compressed-output.jpg', 'upscaled-compressed-image.jpg');
   } catch (error) {
     console.error('Error during processing:', error);
     res.status(500).send('Internal Server Error');
