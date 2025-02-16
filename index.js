@@ -1,69 +1,37 @@
-const express = require('express');
-const replicate = require('replicate');
-const bodyParser = require('body-parser');
+const Replicate = require('replicate');
 
-// Initialize Express and Replicate
-const app = express();
-const port = 3000;
-
-// Body parser to handle JSON body for webhook
-app.use(bodyParser.json());
-
-// Replicate instance
-const replicateInstance = replicate({
-  auth: 'YOUR_REPLICATE_API_KEY',
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
 });
 
-// Webhook endpoint that will receive the update from Replicate
-app.post('/webhooks/replicate', (req, res) => {
-  const predictionData = req.body;
+const input = {
+  image: "https://replicate.delivery/pbxt/Ing7Fa4YMk6YtcoG1YZnaK3UwbgDB5guRc5M2dEjV6ODNLMl/cat.jpg",
+  scale: 2,
+};
 
-  // Handle the received prediction data here
-  console.log('Prediction update received:', predictionData);
-
-  // You can check prediction status here, and act accordingly
-  if (predictionData.status === 'completed') {
-    // Handle when the prediction is completed, e.g., save result, notify user, etc.
-    console.log('Prediction completed!', predictionData.output);
-  } else if (predictionData.status === 'failed') {
-    console.log('Prediction failed');
-  }
-
-  // Respond with a success message to acknowledge receipt of the webhook
-  res.status(200).send('Webhook received successfully');
+const prediction = await replicate.predictions.create({
+  version: 'f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa',
+  input: input,
 });
 
-// Route to initiate the image manipulation request
-app.post('/upscale-image', async (req, res) => {
-  const { image, scale } = req.body;
+console.log('Prediction created:', prediction.id);  // Log prediction ID for reference
 
-  if (!image || !scale) {
-    return res.status(400).send('Image URL and scale factor are required');
-  }
+// Wait until the prediction is completed
+let predictionStatus = await replicate.predictions.get(prediction.id);
 
-  const input = { image, scale };
-  const callbackURL = `http://localhost:${port}/webhooks/replicate`;
+// Fetch the status until it is completed or succeeded
+while (predictionStatus.status !== 'completed' && predictionStatus.status !== 'succeeded') {
+  console.log(`Waiting for prediction to complete... Current status: ${predictionStatus.status}`);
+  await new Promise(resolve => setTimeout(resolve, 5000));  // Wait 5 seconds before polling again
+  predictionStatus = await replicate.predictions.get(prediction.id);
+}
 
-  try {
-    // Create the prediction, passing the webhook URL and the events to be tracked
-    const prediction = await replicateInstance.predictions.create({
-      version: 'f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa',
-      input: input,
-      webhook: callbackURL,
-      webhook_events_filter: ['completed'], // Only listen for "completed" events
-    });
+// Once the prediction is completed, inspect the full status
+console.log('Prediction Status:', predictionStatus);  // Log the entire status object
 
-    console.log('Prediction created:', prediction);
-
-    // Respond with prediction details to the user (you could give a job ID or status)
-    res.status(202).send({ message: 'Prediction started', predictionId: prediction.id });
-  } catch (error) {
-    console.error('Error creating prediction:', error);
-    res.status(500).send('Error starting prediction');
-  }
-});
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+if (predictionStatus.status === 'succeeded' || predictionStatus.status === 'completed') {
+  console.log('Prediction succeeded!');
+  console.log('Output data:', predictionStatus.output); // This should be the image URL or binary data
+} else {
+  console.log('Prediction failed or didn\'t complete.');
+}
