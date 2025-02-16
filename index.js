@@ -23,18 +23,24 @@ app.post('/upscale-image', async (req, res) => {
 
   const input = { image, scale };
 
+  let prediction;
+  let attempts = 0;
+  const maxAttempts = 5; // Maximum number of polling attempts
+  const pollInterval = 5000; // Wait time between polling (5 seconds)
+
   try {
     // Start the Replicate prediction
-    let prediction = await replicate.predictions.create({
+    prediction = await replicate.predictions.create({
       version: "42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b", // The model version
       input: input
     });
 
-    // Polling loop to check the status of the prediction
-    while (prediction.status !== "succeeded" && prediction.status !== "failed") {
+    // Polling loop with limited attempts
+    while (prediction.status !== "succeeded" && prediction.status !== "failed" && attempts < maxAttempts) {
       console.log("Waiting for image processing...");
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      await new Promise(resolve => setTimeout(resolve, pollInterval)); // Wait for the specified interval
       prediction = await replicate.predictions.get(prediction.id); // Update the prediction status
+      attempts++;
     }
 
     if (prediction.status === "succeeded") {
