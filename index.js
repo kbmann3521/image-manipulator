@@ -1,6 +1,7 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { writeFile, readFile } = require('fs/promises');
+const sharp = require('sharp');
 
 // Initialize express app
 const app = express();
@@ -14,7 +15,7 @@ const replicate = new Replicate({
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Define the endpoint to upscale and get raw JSON output
+// Define the endpoint to upscale and compress images
 app.post('/upscale-image', async (req, res) => {
   const { image, scale } = req.body;
 
@@ -25,17 +26,24 @@ app.post('/upscale-image', async (req, res) => {
   const input = { image, scale };
 
   try {
-    // Run the prediction with the provided input
-    const prediction = await replicate.run(
+    const output = await replicate.run(
       "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
       { input }
     );
 
-    // The prediction will return the raw JSON output, which may contain various details
-    console.log(prediction); // Log the entire JSON output for debugging
+    // Fetch the upscaled image
+    const imageBuffer = await fetch(output).then(res => res.arrayBuffer());
 
-    // Send the raw JSON as the response
-    res.json(prediction);
+    // Compress the image using sharp
+    const compressedImage = await sharp(Buffer.from(imageBuffer))
+      .jpeg({ quality: 80 }) // Adjust quality as needed
+      .toBuffer();
+
+    await writeFile("compressed-output.jpg", compressedImage);
+    console.log("Compressed output saved to compressed-output.jpg");
+
+    // Send the compressed image as a download
+    res.download('compressed-output.jpg', 'upscaled-compressed-image.jpg');
   } catch (error) {
     console.error('Error during processing:', error);
     res.status(500).send('Internal Server Error');
