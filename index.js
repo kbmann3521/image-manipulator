@@ -1,53 +1,56 @@
 const express = require('express');
-const replicate = require('replicate');
-const app = express();
-const port = 3000;
+const Replicate = require('replicate');
+const { writeFile, readFile } = require('fs/promises');
+const sharp = require('sharp');
 
-// Initialize Replicate client with your API token
+// Initialize express app
+const app = express();
+const port = process.env.PORT || 3000; // Default to port 3000 okay
+
+// Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
 });
 
-// Input data for the prediction
-const input = {
-    image: "https://replicate.delivery/pbxt/Ing7Fa4YMk6YtcoG1YZnaK3UwbgDB5guRc5M2dEjV6ODNLMl/cat.jpg",
-    scale: 2
-};
+// Middleware to parse JSON bodies
+app.use(express.json());
 
-// The callback URL for the webhook
-const callbackURL = `https://phpstack-1409552-5253125.cloudwaysapps.com/webhooks/replicate`;
+// Define the endpoint to upscale and compress images
+app.post('/upscale-image', async (req, res) => {
+  const { image, scale } = req.body;
 
-// Function to create a prediction
-async function createPrediction() {
-    try {
-        const response = await replicateClient.predictions.create({
-            version: "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa", // Replace with correct version
-            input: input,
-            webhook: callbackURL,
-            webhook_events_filter: ["completed"],
-        });
+  if (!image || !scale) {
+    return res.status(400).send('Image URL and scale factor are required');
+  }
 
-        console.log('Prediction created:', response);
-    } catch (error) {
-        console.error('Error creating prediction:', error);
-    }
-}
+  const input = { image, scale };
 
-// Setup the webhook endpoint
-app.post('/webhooks/replicate', express.json(), (req, res) => {
-    const event = req.body;
+  try {
+    const output = await replicate.run(
+      "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
+      { input }
+    );
 
-    // Log the event data
-    console.log('Webhook received:', event);
+    // Fetch the upscaled image
+    const imageBuffer = await fetch(output).then(res => res.arrayBuffer());
 
-    // Respond with success
-    res.status(200).send('Webhook received');
+    // Compress the image using sharp
+    const compressedImage = await sharp(Buffer.from(imageBuffer))
+      .jpeg({ quality: 80 }) // Adjust quality as needed
+      .toBuffer();
+
+    await writeFile("compressed-output.jpg", compressedImage);
+    console.log("Compressed output saved to compressed-output.jpg");
+
+    // Send the compressed image as a download
+    res.download('compressed-output.jpg', 'upscaled-compressed-image.jpg');
+  } catch (error) {
+    console.error('Error during processing:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
-// Start the express server
+// Start the server
 app.listen(port, () => {
-    console.log(`Server listening at http://localhost:${port}`);
-
-    // Trigger the prediction creation
-    createPrediction();
+  console.log(`Server running on http://localhost:${port}`);
 });
