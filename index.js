@@ -5,7 +5,7 @@ const sharp = require('sharp');
 
 // Initialize express app
 const app = express();
-const port = process.env.PORT || 3000; // Default to port 3000
+const port = process.env.PORT || 3000; // Default to port 3000 okay
 
 // Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
