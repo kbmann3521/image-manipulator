@@ -10,38 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '18'
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+    - name: Install dependencies
+      run: npm install
 
-      - name: Set up SSH key for authentication
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          eval $(ssh-agent -s)
-          ssh-add ~/.ssh/id_rsa
-
-      - name: Push changes to Cloudways and start app with PM2
-        run: |
-          # Set the remote URL for GitHub repository (already set up in Cloudways)
-          git remote set-url origin git@github.com:kbmann3521/image-manipulator.git
-          
-          # Push the changes to Cloudways server's Git repository
-          git push origin main
-
-          # SSH into the server and restart the app using PM2
-          ssh -o StrictHostKeyChecking=no kylebmann@138.197.123.152 << 'EOF'
-            cd /home/master/applications/npkkpvftcp/public_html &&  # Change this to the public_html directory
-            git pull origin main &&  # Pull the latest changes
-            npm install &&           # Reinstall dependencies
-            pm2 restart index.js     # Start your app with PM2
-          EOF
+    - name: Run script with Replicate API
+      env:
+        REPLICATE_API_KEY: ${{ secrets.REPLICATE_API_KEY }} # Use the secret here
+      run: node index.js
