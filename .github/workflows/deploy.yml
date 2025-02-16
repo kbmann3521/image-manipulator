@@ -21,5 +21,8 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run script with PM2
+    - name: Install PM2
+      run: npm install pm2 -g
+
+    - name: Start app with PM2
       run: pm2 start index.js
