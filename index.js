@@ -1,56 +1,33 @@
-const express = require('express');
-const Replicate = require('replicate');
-const { writeFile, readFile } = require('fs/promises');
-const sharp = require('sharp');
+import Replicate from "replicate";
 
-// Initialize express app
-const app = express();
-const port = process.env.PORT || 3000; // Default to port 3000 okay
-
-// Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
 });
 
-// Middleware to parse JSON bodies
-app.use(express.json());
-
-// Define the endpoint to upscale and compress images
-app.post('/upscale-image', async (req, res) => {
-  const { image, scale } = req.body;
-
-  if (!image || !scale) {
-    return res.status(400).send('Image URL and scale factor are required');
-  }
-
-  const input = { image, scale };
-
+(async () => {
   try {
-    const output = await replicate.run(
-      "nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
-      { input }
-    );
+    let prediction = await replicate.predictions.create({
+      version: "42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
+      input: {
+        image: "https://replicate.delivery/pbxt/Ing7Fa4YMk6YtcoG1YZnaK3UwbgDB5guRc5M2dEjV6ODNLMl/cat.jpg",
+        scale: 1,
+        face_enhance: false
+      }
+    });
 
-    // Fetch the upscaled image
-    const imageBuffer = await fetch(output).then(res => res.arrayBuffer());
+    // Polling loop to check the status
+    while (prediction.status !== "succeeded" && prediction.status !== "failed") {
+      console.log("Waiting for image processing...");
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds
+      prediction = await replicate.predictions.get(prediction.id); // Update the prediction status
+    }
 
-    // Compress the image using sharp
-    const compressedImage = await sharp(Buffer.from(imageBuffer))
-      .jpeg({ quality: 80 }) // Adjust quality as needed
-      .toBuffer();
-
-    await writeFile("compressed-output.jpg", compressedImage);
-    console.log("Compressed output saved to compressed-output.jpg");
-
-    // Send the compressed image as a download
-    res.download('compressed-output.jpg', 'upscaled-compressed-image.jpg');
+    if (prediction.status === "succeeded") {
+      console.log("Upscaled Image URL:", prediction.output);
+    } else {
+      console.error("Model failed to process the image.");
+    }
   } catch (error) {
-    console.error('Error during processing:', error);
-    res.status(500).send('Internal Server Error');
+    console.error("Error running model:", error);
   }
-});
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+})();
