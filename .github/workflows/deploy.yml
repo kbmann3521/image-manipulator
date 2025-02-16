@@ -21,7 +21,5 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run script with Replicate API
-      env:
-        REPLICATE_API_KEY: ${{ secrets.REPLICATE_API_KEY }} # Use the secret here
-      run: node index.js
+    - name: Run script with PM2
+      run: pm2 start index.js
