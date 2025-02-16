@@ -1,4 +1,4 @@
-name: Node.js CI
+name: Deploy to Cloudways
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,18 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run script with Replicate API
+    - name: Deploy to Cloudways
       env:
-        REPLICATE_API_KEY: ${{ secrets.REPLICATE_API_KEY }} # Use the secret here
-      run: node index.js
+        SSH_HOST: ${{ secrets.CLOUDWAYS_HOST }}
+        SSH_USER: ${{ secrets.CLOUDWAYS_USER }}
+        SSH_KEY: ${{ secrets.CLOUDWAYS_SSH_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'EOF'
+          cd /home/master/applications/YOUR_APP_NAME_HERE/public_html
+          git pull origin main
+          npm install
+          pm2 restart index || pm2 start index.js --name "index"
+        EOF
