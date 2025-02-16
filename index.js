@@ -1,21 +1,39 @@
 const express = require('express');
-const Replicate = require('replicate');
-const { writeFile, readFile } = require('fs/promises');
-const sharp = require('sharp');
+const replicate = require('replicate');
+const bodyParser = require('body-parser');
 
-// Initialize express app
+// Initialize Express and Replicate
 const app = express();
-const port = process.env.PORT || 3000; // Default to port 3000 okay
+const port = 3000;
 
-// Initialize replicate with the API key from environment variable
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
+// Body parser to handle JSON body for webhook
+app.use(bodyParser.json());
+
+// Replicate instance
+const replicateInstance = replicate({
+  auth: 'YOUR_REPLICATE_API_KEY',
 });
 
-// Middleware to parse JSON bodies
-app.use(express.json());
+// Webhook endpoint that will receive the update from Replicate
+app.post('/webhooks/replicate', (req, res) => {
+  const predictionData = req.body;
 
-// Define the endpoint to upscale and compress images
+  // Handle the received prediction data here
+  console.log('Prediction update received:', predictionData);
+
+  // You can check prediction status here, and act accordingly
+  if (predictionData.status === 'completed') {
+    // Handle when the prediction is completed, e.g., save result, notify user, etc.
+    console.log('Prediction completed!', predictionData.output);
+  } else if (predictionData.status === 'failed') {
+    console.log('Prediction failed');
+  }
+
+  // Respond with a success message to acknowledge receipt of the webhook
+  res.status(200).send('Webhook received successfully');
+});
+
+// Route to initiate the image manipulation request
 app.post('/upscale-image', async (req, res) => {
   const { image, scale } = req.body;
 
@@ -24,29 +42,24 @@ app.post('/upscale-image', async (req, res) => {
   }
 
   const input = { image, scale };
+  const callbackURL = `http://localhost:${port}/webhooks/replicate`;
 
   try {
-    const output = await replicate.run(
-      "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
-      { input }
-    );
+    // Create the prediction, passing the webhook URL and the events to be tracked
+    const prediction = await replicateInstance.predictions.create({
+      version: 'f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa',
+      input: input,
+      webhook: callbackURL,
+      webhook_events_filter: ['completed'], // Only listen for "completed" events
+    });
 
-    // Fetch the upscaled image
-    const imageBuffer = await fetch(output).then(res => res.arrayBuffer());
+    console.log('Prediction created:', prediction);
 
-    // Compress the image using sharp
-    const compressedImage = await sharp(Buffer.from(imageBuffer))
-      .jpeg({ quality: 80 }) // Adjust quality as needed
-      .toBuffer();
-
-    await writeFile("compressed-output.jpg", compressedImage);
-    console.log("Compressed output saved to compressed-output.jpg");
-
-    // Send the compressed image as a download
-    res.download('compressed-output.jpg', 'upscaled-compressed-image.jpg');
+    // Respond with prediction details to the user (you could give a job ID or status)
+    res.status(202).send({ message: 'Prediction started', predictionId: prediction.id });
   } catch (error) {
-    console.error('Error during processing:', error);
-    res.status(500).send('Internal Server Error');
+    console.error('Error creating prediction:', error);
+    res.status(500).send('Error starting prediction');
   }
 });
 
