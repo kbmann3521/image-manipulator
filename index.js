@@ -1,21 +1,50 @@
 const express = require('express');
 const Replicate = require('replicate');
-const { writeFile, readFile } = require('fs/promises');
+const { writeFile } = require('fs/promises');
 const sharp = require('sharp');
 
 // Initialize express app
 const app = express();
-const port = process.env.PORT || 3000; // Default to port 3000 okay
+const port = process.env.PORT || 3000;
 
 // Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
+  auth: process.env.REPLICATE_API_KEY,
 });
 
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Define the endpoint to upscale and compress images
+// Endpoint to run image generation (from your first script)
+app.post('/run-image', async (req, res) => {
+  try {
+    const model = 'stability-ai/stable-diffusion-3.5-large:e6c4657fe1b3f078fb26d68a1413bc8013e2b085504dd84a33e26e16fb95a593';
+    const input = {
+      cfg: 4.5,
+      steps: 40,
+      prompt: req.body.prompt || '~*~aesthetic~*~ #boho #fashion, full-body 30-something woman laying on microfloral grass, candid pose, overlay reads Stable Diffusion 3.5, cheerful cursive typography font',
+      aspect_ratio: '1:1',
+      output_format: 'webp',
+      output_quality: 90,
+      prompt_strength: 0.85,
+    };
+
+    console.log('Using model:', model);
+    console.log('With input:', input);
+    console.log('Running...');
+
+    const output = await replicate.run(model, { input });
+
+    console.log('Done!', output);
+
+    res.json({ success: true, output });
+  } catch (error) {
+    console.error('Error running the model:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Endpoint to upscale and compress images (from your second script)
 app.post('/upscale-image', async (req, res) => {
   const { image, scale } = req.body;
 
@@ -36,7 +65,7 @@ app.post('/upscale-image', async (req, res) => {
 
     // Compress the image using sharp
     const compressedImage = await sharp(Buffer.from(imageBuffer))
-      .jpeg({ quality: 80 }) // Adjust quality as needed
+      .jpeg({ quality: 80 })
       .toBuffer();
 
     await writeFile("compressed-output.jpg", compressedImage);
