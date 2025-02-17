@@ -17,8 +17,16 @@ app.use(express.json());
 // POST endpoint to generate image
 app.post('/generate-image', async (req, res) => {
   try {
+    // Define your input parameters based on the input schema you provided
     const input = {
-      prompt: "~*~aesthetic~*~ #boho #fashion, full-body 30-something woman laying on microfloral grass, candid pose, overlay reads Stable Diffusion 3.5, cheerful cursive typography font"
+      prompt: "~*~aesthetic~*~ #boho #fashion, full-body 30-something woman laying on microfloral grass, candid pose, overlay reads Stable Diffusion 3.5, cheerful cursive typography font",
+      cfg: 7.0, // You can adjust this as needed
+      seed: Math.floor(Math.random() * 10000), // Or any specific number for reproducibility
+      steps: 40, // Default is 40
+      aspect_ratio: "1:1", // Default aspect ratio
+      output_format: "webp", // Default output format
+      output_quality: 90, // Default quality
+      prompt_strength: 0.85, // Default prompt strength for image to image
     };
 
     // Run the model
