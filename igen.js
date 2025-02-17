@@ -1,7 +1,7 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { writeFile } = require('fs/promises');
-const fetch = require('node-fetch'); // Ensure fetch is available
+const fetch = require('node-fetch'); // Ensure 'fetch' is available for downloading images
 
 // Initialize express app
 const app = express();
@@ -28,6 +28,9 @@ app.post('/generate-image', async (req, res) => {
       "stability-ai/stable-diffusion-3.5-large", 
       { input }
     );
+
+    // Log the output to inspect its structure
+    console.log(output);
 
     // Check if output is valid
     if (!output || output.length === 0) {
