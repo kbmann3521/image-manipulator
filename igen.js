@@ -39,8 +39,13 @@ app.post('/generate-image', async (req, res) => {
 
     // Fetch and save the generated image(s)
     for (const [index, url] of Object.entries(output)) {
-      const imageBuffer = await fetch(url).then(res => res.buffer());
-      await writeFile(`output_${index}.webp`, imageBuffer);
+      // Check if the output URL is in WebP format (or adjust if necessary)
+      if (url.endsWith('.webp')) {
+        const imageBuffer = await fetch(url).then(res => res.buffer());
+        await writeFile(`output_${index}.webp`, imageBuffer);
+      } else {
+        return res.status(500).send('Output is not in WebP format');
+      }
     }
 
     res.status(200).send('Images generated and saved successfully!');
