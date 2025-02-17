@@ -1,7 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { writeFile } = require('fs/promises');
-const fetch = require('node-fetch'); // Ensure 'fetch' is available for downloading images
 
 // Initialize express app
 const app = express();
@@ -15,7 +14,7 @@ const replicate = new Replicate({
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Define the endpoint to generate and save images
+// POST endpoint to run the model
 app.post('/generate-image', async (req, res) => {
   const { input } = req.body;
 
@@ -29,23 +28,17 @@ app.post('/generate-image', async (req, res) => {
       { input }
     );
 
-    // Log the output to inspect its structure
-    console.log(output);
+    console.log('Output:', output);
 
-    // Check if output is valid
-    if (!output || output.length === 0) {
-      return res.status(500).send('No output received from the model');
-    }
-
-    // Fetch and save the generated image(s)
-    for (const [index, url] of Object.entries(output)) {
-      // Check if the output URL is in WebP format (or adjust if necessary)
-      if (url.endsWith('.webp')) {
-        const imageBuffer = await fetch(url).then(res => res.buffer());
-        await writeFile(`output_${index}.webp`, imageBuffer);
-      } else {
-        return res.status(500).send('Output is not in WebP format');
+    // If the output is an array of URLs or strings, handle it directly
+    if (Array.isArray(output)) {
+      for (const [index, url] of output.entries()) {
+        // Save the image directly from the URL (assuming it's the correct format)
+        await writeFile(`output_${index}.webp`, url); // Saves the image file as a .webp
       }
+    } else {
+      res.status(500).send('Invalid output format from model');
+      return;
     }
 
     res.status(200).send('Images generated and saved successfully!');
