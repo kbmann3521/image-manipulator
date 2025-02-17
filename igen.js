@@ -1,6 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
-const { writeFile } = require('fs/promises');
+const { writeFile, readFile } = require('fs/promises');
 
 // Initialize express app
 const app = express();
