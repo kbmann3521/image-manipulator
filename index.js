@@ -5,11 +5,11 @@ const sharp = require('sharp');
 
 // Initialize express app
 const app = express();
-const port = process.env.PORT || 3000; // Default to port 3000 okay
+const port = process.env.PORT || 3000; // Default to port 3000
 
 // Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
+  auth: process.env.REPLICATE_API_KEY, // API key from environment variables
 });
 
 // Middleware to parse JSON bodies
@@ -46,6 +46,38 @@ app.post('/upscale-image', async (req, res) => {
     res.download('compressed-output.jpg', 'upscaled-compressed-image.jpg');
   } catch (error) {
     console.error('Error during processing:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Define the endpoint to generate an image
+app.post('/generate-image', async (req, res) => {
+  const { prompt } = req.body;
+
+  if (!prompt) {
+    return res.status(400).send('Prompt is required');
+  }
+
+  const input = { prompt };
+
+  try {
+    const output = await replicate.run(
+      "stability-ai/stable-diffusion-3.5-large:e6c4657fe1b3f078fb26d68a1413bc8013e2b085504dd84a33e26e16fb95a593",
+      { input }
+    );
+
+    // Save the generated images to disk
+    const savedFiles = [];
+    for (const [index, item] of Object.entries(output)) {
+      const filePath = `output_${index}.webp`;
+      await writeFile(filePath, item);
+      savedFiles.push(filePath);
+    }
+
+    console.log("Generated images saved:", savedFiles);
+    res.json({ message: 'Images generated successfully', files: savedFiles });
+  } catch (error) {
+    console.error('Error generating image:', error);
     res.status(500).send('Internal Server Error');
   }
 });
