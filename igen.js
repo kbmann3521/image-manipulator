@@ -30,7 +30,7 @@ app.post('/generate-image', async (req, res) => {
     };
 
     // Run the model
-    const output = await replicate.run("stability-ai/stable-diffusion-3.5-large:e6c4657fe1b3f078fb26d68a1413bc8013e2b085504dd84a33e26e16fb95a593", { input });
+    const output = await replicate.run("stability-ai/stable-diffusion-3.5-large", { input });
 
     // Save the generated image(s) to disk
     for (const [index, item] of Object.entries(output)) {
