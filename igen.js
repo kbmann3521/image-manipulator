@@ -1,6 +1,6 @@
-import express from "express";
-import Replicate from "replicate";
-import { writeFile } from "node:fs/promises";
+const express = require('express');
+const Replicate = require('replicate');
+const { writeFile, readFile } = require('fs/promises');
 
 const app = express();
 const port = 3000;
