@@ -1,6 +1,7 @@
 const express = require('express');
 const Replicate = require('replicate');
-const { writeFile, readFile } = require('fs/promises');
+const { writeFile } = require('fs/promises');
+const fetch = require('node-fetch'); // Ensure fetch is available
 
 // Initialize express app
 const app = express();
@@ -11,37 +12,42 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY, // API key from environment variables
 });
 
-// Middleware to parse JSON requests
+// Middleware to parse JSON bodies
 app.use(express.json());
 
-// POST endpoint to run the model
+// Define the endpoint to generate and save images
 app.post('/generate-image', async (req, res) => {
-  try {
-    const input = req.body.input || {
-      prompt: "A futuristic cyberpunk city at night, neon lights reflecting on rainy streets, ultra-detailed, cinematic lighting",
-    };
+  const { input } = req.body;
 
-    // Run the model
-    const output = await replicate.run("stability-ai/stable-diffusion-3.5-large", { input });
+  if (!input) {
+    return res.status(400).send('Input prompt is required');
+  }
+
+  try {
+    const output = await replicate.run(
+      "stability-ai/stable-diffusion-3.5-large", 
+      { input }
+    );
 
     // Check if output is valid
     if (!output || output.length === 0) {
-      return res.status(500).send('No output received from the model.');
+      return res.status(500).send('No output received from the model');
     }
 
-    // Save the generated image(s) to disk
+    // Fetch and save the generated image(s)
     for (const [index, url] of Object.entries(output)) {
-      await writeFile(`output_${index}.webp`, url);
+      const imageBuffer = await fetch(url).then(res => res.buffer());
+      await writeFile(`output_${index}.webp`, imageBuffer);
     }
 
     res.status(200).send('Images generated and saved successfully!');
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).send('Error generating image');
+    console.error('Error during processing:', error);
+    res.status(500).send('Error generating image: ' + error.message);
   }
 });
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });
