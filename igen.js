@@ -1,70 +1,47 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { writeFile } = require('fs/promises');
-const fetch = require('node-fetch'); // Required to fetch image from URL
 
 // Initialize express app
 const app = express();
 const port = process.env.PORT || 3000; // Default to port 3000
 
+// Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY, // API key is set as a GitHub secret
+  auth: process.env.REPLICATE_API_KEY, // API key from environment variables
 });
 
+// Middleware to parse JSON requests
 app.use(express.json());
 
-app.post("/image/generate", async (req, res) => {
+// POST endpoint to run the model
+app.post('/generate-image', async (req, res) => {
   try {
-    const {
-      prompt = "Default prompt",
-      cfg = 4.5,
-      seed = null,
-      steps = 40,
-      aspect_ratio = "1:1",
-      output_format = "jpg",  // Supports "jpg" or "webp"
-      output_quality = 90,
-      prompt_strength = 0.85,
-      image = null
-    } = req.body;
-
-    const input = {
-      prompt,
-      cfg,
-      seed,
-      steps,
-      aspect_ratio,
-      output_format,
-      output_quality,
-      prompt_strength,
-      image,
+    const input = req.body.input || {
+      prompt: "A futuristic cyberpunk city at night, neon lights reflecting on rainy streets, ultra-detailed, cinematic lighting",
     };
 
+    // Run the model
     const output = await replicate.run("stability-ai/stable-diffusion-3.5-large", { input });
 
+    // Check if output is valid
     if (!output || output.length === 0) {
-      return res.status(500).json({ error: "Failed to generate image." });
+      return res.status(500).send('No output received from the model.');
     }
 
-    const imagePaths = [];
-
-    for (const [index, imageUrl] of Object.entries(output)) {
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
-
-      const buffer = await response.arrayBuffer();
-      const filePath = `output_${index}.${output_format}`;
-      await writeFile(filePath, Buffer.from(buffer));
-
-      imagePaths.push(filePath);
+    // Save the generated image(s) to disk
+    for (const [index, url] of Object.entries(output)) {
+      await writeFile(`output_${index}.webp`, url);
     }
 
-    res.json({ message: "Image(s) generated successfully!", files: imagePaths });
+    res.status(200).send('Images generated and saved successfully!');
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Image generation failed.", details: error.message });
+    console.error("Error:", error);
+    res.status(500).send('Error generating image');
   }
 });
 
+// Start the server
 app.listen(port, () => {
-  console.log(`igen.js running at http://localhost:${port}`);
+  console.log(`Server is running on port ${port}`);
 });
