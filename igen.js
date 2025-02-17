@@ -1,10 +1,11 @@
 const express = require('express');
 const Replicate = require('replicate');
-const { writeFile, readFile } = require('fs/promises');
+const { writeFile } = require('fs/promises');
+const fetch = require('node-fetch'); // Required to fetch image from URL
 
 // Initialize express app
 const app = express();
-const port = process.env.PORT || 3000; // Default to port 3000 okay
+const port = process.env.PORT || 3000; // Default to port 3000
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY, // API key is set as a GitHub secret
@@ -45,9 +46,15 @@ app.post("/image/generate", async (req, res) => {
     }
 
     const imagePaths = [];
-    for (const [index, item] of Object.entries(output)) {
+
+    for (const [index, imageUrl] of Object.entries(output)) {
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+
+      const buffer = await response.arrayBuffer();
       const filePath = `output_${index}.${output_format}`;
-      await writeFile(filePath, item);
+      await writeFile(filePath, Buffer.from(buffer));
+
       imagePaths.push(filePath);
     }
 
