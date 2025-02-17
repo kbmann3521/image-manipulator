@@ -4,47 +4,35 @@ const { writeFile } = require('fs/promises');
 
 // Initialize express app
 const app = express();
-const port = process.env.PORT || 3000; // Default to port 3000
+const port = process.env.PORT || 3000;
 
 // Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY, // API key from environment variables
 });
 
-// Middleware to parse JSON bodies
+// Middleware to parse JSON requests
 app.use(express.json());
 
-// POST endpoint to run the model
+// POST endpoint to generate image
 app.post('/generate-image', async (req, res) => {
-  const { input } = req.body;
-
-  if (!input) {
-    return res.status(400).send('Input prompt is required');
-  }
-
   try {
-    const output = await replicate.run(
-      "stability-ai/stable-diffusion-3.5-large", 
-      { input }
-    );
+    const input = {
+      prompt: "~*~aesthetic~*~ #boho #fashion, full-body 30-something woman laying on microfloral grass, candid pose, overlay reads Stable Diffusion 3.5, cheerful cursive typography font"
+    };
 
-    console.log('Output:', output);
+    // Run the model
+    const output = await replicate.run("stability-ai/stable-diffusion-3.5-large", { input });
 
-    // If the output is an array of URLs or strings, handle it directly
-    if (Array.isArray(output)) {
-      for (const [index, url] of output.entries()) {
-        // Save the image directly from the URL (assuming it's the correct format)
-        await writeFile(`output_${index}.webp`, url); // Saves the image file as a .webp
-      }
-    } else {
-      res.status(500).send('Invalid output format from model');
-      return;
+    // Save the generated image(s) to disk
+    for (const [index, item] of Object.entries(output)) {
+      await writeFile(`output_${index}.webp`, item);
     }
 
     res.status(200).send('Images generated and saved successfully!');
   } catch (error) {
-    console.error('Error during processing:', error);
-    res.status(500).send('Error generating image: ' + error.message);
+    console.error("Error:", error);
+    res.status(500).send('Error generating image');
   }
 });
 
