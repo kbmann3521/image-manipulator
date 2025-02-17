@@ -1,52 +1,52 @@
 const express = require('express');
 const Replicate = require('replicate');
-const { writeFile } = require('fs/promises');
-const fetch = require('node-fetch'); // Ensure this is installed
+const { writeFile, readFile } = require('fs/promises');
+const sharp = require('sharp');
 
 // Initialize express app
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000; // Default to port 3000 okay
 
 // Initialize replicate with the API key from environment variable
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY, // API key from environment variables
+  auth: process.env.REPLICATE_API_KEY, // API key from GitHub Secrets or environment variables
 });
 
-// Middleware to parse JSON requests
+// Middleware to parse JSON bodies
 app.use(express.json());
 
-// POST endpoint to generate image
-app.post('/generate-image', async (req, res) => {
+// Define the endpoint to upscale and compress images
+app.post('/upscale-image', async (req, res) => {
+  const { image, scale } = req.body;
+
+  if (!image || !scale) {
+    return res.status(400).send('Image URL and scale factor are required');
+  }
+
+  const input = { image, scale };
+
   try {
-    // Define your input parameters
-    const input = {
-      prompt: "~*~aesthetic~*~ #boho #fashion, full-body 30-something woman laying on microfloral grass, candid pose, overlay reads Stable Diffusion 3.5, cheerful cursive typography font",
-      cfg: 7.0,
-      seed: Math.floor(Math.random() * 10000),
-      steps: 40,
-      aspect_ratio: "1:1",
-      output_format: "webp",
-      output_quality: 90,
-      prompt_strength: 0.85,
-    };
+    const output = await replicate.run(
+      "nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
+      { input }
+    );
 
-    // Run the model
-    const output = await replicate.run("stability-ai/stable-diffusion-3.5-large", { input });
+    // Fetch the upscaled image
+    const imageBuffer = await fetch(output).then(res => res.arrayBuffer());
 
-    // Fetch the generated image (assuming output is a URL or base64)
-    const imageUrl = output[0]; // Adjust based on actual structure of output
+    // Compress the image using sharp
+    const compressedImage = await sharp(Buffer.from(imageBuffer))
+      .jpeg({ quality: 80 }) // Adjust quality as needed
+      .toBuffer();
 
-    // Fetch the image data
-    const response = await fetch(imageUrl);
-    const imageBuffer = await response.buffer(); // Get image data as buffer
+    await writeFile("compressed-output.jpg", compressedImage);
+    console.log("Compressed output saved to compressed-output.jpg");
 
-    // Save the image to disk
-    await writeFile('output_image.webp', imageBuffer);
-
-    res.status(200).send('Images generated and saved successfully!');
+    // Send the compressed image as a download
+    res.download('compressed-output.jpg', 'upscaled-compressed-image.jpg');
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).send('Error generating image');
+    console.error('Error during processing:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 
