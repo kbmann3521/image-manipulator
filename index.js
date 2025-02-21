@@ -104,17 +104,15 @@ app.post('/analyze-image', async (req, res) => {
   const input = { image, prompt };
 
   try {
-    const response = await replicate.stream(
+    let responseText = '';
+    for await (const event of replicate.stream(
       "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
       { input }
-    );
-
-    let result = '';
-    for await (const event of response) {
-      result += event;
+    )) {
+      responseText += event;
     }
 
-    res.json({ response: result.trim() });
+    res.json({ response: responseText.trim() });
   } catch (error) {
     console.error('Error analyzing image:', error);
     res.status(500).send('Internal Server Error');
