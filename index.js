@@ -1,8 +1,8 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { writeFile } = require('fs/promises');
-const sharp = require('sharp');
 const path = require('path');
+const fetch = require('node-fetch');
 
 // Initialize Express app
 const app = express();
@@ -100,23 +100,56 @@ app.post('/analyze-image', async (req, res) => {
     return res.status(400).send('Image URL and prompt are required');
   }
 
-  const input = { image, prompt, top_p: 1, max_tokens: 1024, temperature: 0.2 };
+  const input = {
+    image,
+    prompt
+  };
 
   try {
-    const output = await replicate.run(
+    const prediction = await replicate.run(
       "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
       { input }
     );
 
-    if (!output) {
-      return res.status(500).send('Error analyzing image');
+    if (!prediction || !prediction.id) {
+      return res.status(500).send('Prediction not started');
     }
 
-    // Send the analysis result as response
-    res.json({ analysis: output });
+    // Poll the prediction status
+    const predictionId = prediction.id;
+
+    const checkPredictionStatus = async () => {
+      try {
+        const response = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${process.env.REPLICATE_API_KEY}`,
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'succeeded') {
+          console.log("Prediction succeeded, output:", data.output);
+          res.json({ output: data.output });
+        } else if (data.status === 'failed') {
+          console.log("Prediction failed");
+          res.status(500).send('Prediction failed');
+        } else {
+          console.log("Prediction still processing...");
+          setTimeout(checkPredictionStatus, 5000); // Poll every 5 seconds
+        }
+      } catch (error) {
+        console.error('Error checking prediction status:', error);
+        res.status(500).send('Error checking prediction status');
+      }
+    };
+
+    // Start polling the prediction status
+    checkPredictionStatus();
   } catch (error) {
-    console.error('Error analyzing image:', error);
-    res.status(500).send('Internal Server Error');
+    console.error('Error initiating prediction:', error);
+    res.status(500).send('Error initiating prediction');
   }
 });
 
