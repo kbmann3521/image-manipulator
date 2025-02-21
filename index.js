@@ -108,14 +108,14 @@ app.post('/analyze-image', async (req, res) => {
       { input }
     );
 
-    if (!output || !output.data || !output.data.analysis) {
+    if (!output) {
       return res.status(500).send('Error analyzing image');
     }
 
-    // Join the analysis array into a single string
-    const analysisParagraph = output.data.analysis.join(' ').trim();
+    // Join the analysis array into a single paragraph
+    const analysisParagraph = output.data.analysis.filter(text => text.trim() !== "").join(' ');
 
-    // Send the formatted analysis as response
+    // Send the analysis result as a single paragraph
     res.json({ analysis: analysisParagraph });
   } catch (error) {
     console.error('Error analyzing image:', error);
@@ -125,5 +125,5 @@ app.post('/analyze-image', async (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(Server running on http://localhost:${port});
 });
