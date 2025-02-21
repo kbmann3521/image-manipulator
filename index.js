@@ -108,12 +108,15 @@ app.post('/analyze-image', async (req, res) => {
       { input }
     );
 
-    if (!output) {
+    if (!output || !output.data || !output.data.analysis) {
       return res.status(500).send('Error analyzing image');
     }
 
-    // Send the analysis result as response
-    res.json({ analysis: output });
+    // Join the analysis array into a single string
+    const analysisParagraph = output.data.analysis.join(' ').trim();
+
+    // Send the formatted analysis as response
+    res.json({ analysis: analysisParagraph });
   } catch (error) {
     console.error('Error analyzing image:', error);
     res.status(500).send('Internal Server Error');
