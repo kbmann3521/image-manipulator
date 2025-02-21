@@ -3,6 +3,7 @@ const Replicate = require('replicate');
 const { writeFile } = require('fs/promises');
 const sharp = require('sharp');
 const path = require('path');
+const fetch = require('node-fetch');
 
 // Initialize Express app
 const app = express();
@@ -88,6 +89,34 @@ app.post('/upscale-image', async (req, res) => {
     res.download(compressedFilePath, 'upscaled-compressed-image.jpg');
   } catch (error) {
     console.error('Error during processing:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Endpoint to analyze an image with a prompt
+app.post('/analyze-image', async (req, res) => {
+  const { image, prompt } = req.body;
+
+  if (!image || !prompt) {
+    return res.status(400).send('Image URL and prompt are required');
+  }
+
+  const input = { image, prompt };
+
+  try {
+    const response = await replicate.stream(
+      "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
+      { input }
+    );
+
+    let result = '';
+    for await (const event of response) {
+      result += event;
+    }
+
+    res.json({ response: result.trim() });
+  } catch (error) {
+    console.error('Error analyzing image:', error);
     res.status(500).send('Internal Server Error');
   }
 });
