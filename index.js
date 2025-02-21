@@ -3,7 +3,6 @@ const Replicate = require('replicate');
 const { writeFile } = require('fs/promises');
 const sharp = require('sharp');
 const path = require('path');
-const fetch = require('node-fetch');
 
 // Initialize Express app
 const app = express();
@@ -93,7 +92,7 @@ app.post('/upscale-image', async (req, res) => {
   }
 });
 
-// Endpoint to analyze an image with a prompt
+// New endpoint for analyzing images with LLaVA model
 app.post('/analyze-image', async (req, res) => {
   const { image, prompt } = req.body;
 
@@ -104,15 +103,17 @@ app.post('/analyze-image', async (req, res) => {
   const input = { image, prompt };
 
   try {
-    let responseText = '';
-    for await (const event of replicate.stream(
+    const response = await replicate.stream(
       "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
       { input }
-    )) {
-      responseText += event;
+    );
+
+    let result = "";
+    for await (const event of response) {
+      result += event;
     }
 
-    res.json({ response: responseText.trim() });
+    res.json({ response: result.trim() });
   } catch (error) {
     console.error('Error analyzing image:', error);
     res.status(500).send('Internal Server Error');
