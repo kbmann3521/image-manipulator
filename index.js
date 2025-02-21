@@ -92,7 +92,7 @@ app.post('/upscale-image', async (req, res) => {
   }
 });
 
-// Endpoint to analyze an image
+// New endpoint to analyze an image
 app.post('/analyze-image', async (req, res) => {
   const { image, prompt } = req.body;
 
@@ -100,7 +100,7 @@ app.post('/analyze-image', async (req, res) => {
     return res.status(400).send('Image URL and prompt are required');
   }
 
-  const input = { image, prompt };
+  const input = { image, prompt, top_p: 1, max_tokens: 1024, temperature: 0.2 };
 
   try {
     const output = await replicate.run(
@@ -108,13 +108,12 @@ app.post('/analyze-image', async (req, res) => {
       { input }
     );
 
-    if (!output || output.length === 0) {
-      return res.status(500).send('No analysis result generated');
+    if (!output) {
+      return res.status(500).send('Error analyzing image');
     }
 
-    console.log("Analysis result:", output.join(""));
-
-    res.json({ result: output.join("") });
+    // Send the analysis result as response
+    res.json({ analysis: output });
   } catch (error) {
     console.error('Error analyzing image:', error);
     res.status(500).send('Internal Server Error');
