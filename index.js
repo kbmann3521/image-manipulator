@@ -112,11 +112,8 @@ app.post('/analyze-image', async (req, res) => {
       return res.status(500).send('Error analyzing image');
     }
 
-    // Join the analysis array into a single paragraph
-    const analysisText = output.data.analysis.join(' ');
-
     // Send the analysis result as response
-    res.json({ analysis: analysisText });
+    res.json({ analysis: output });
   } catch (error) {
     console.error('Error analyzing image:', error);
     res.status(500).send('Internal Server Error');
@@ -125,5 +122,5 @@ app.post('/analyze-image', async (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(Server running on http://localhost:${port});
 });
