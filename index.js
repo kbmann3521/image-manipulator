@@ -94,26 +94,30 @@ app.post('/upscale-image', async (req, res) => {
   }
 });
 
-// 🆕 New endpoint: Analyze image and respond with text
+// New endpoint to analyze an image
 app.post('/analyze-image', async (req, res) => {
   const { image, prompt } = req.body;
 
   if (!image || !prompt) {
-    return res.status(400).json({ error: 'Image URL and prompt are required' });
+    return res.status(400).json({ error: "Image URL and prompt are required" });
   }
 
   try {
     const input = { image, prompt };
-    let responseText = '';
 
-    for await (const event of replicate.stream(
+    // Stream the response from Replicate
+    const stream = replicate.stream(
       "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
       { input }
-    )) {
-      responseText += event;
+    );
+
+    let responseText = "";
+
+    for await (const event of stream) {
+      responseText += event; // Accumulate stream data
     }
 
-    res.json({ response: responseText.trim() });
+    res.json({ response: responseText.trim() }); // Send full response
   } catch (error) {
     console.error('Error analyzing image:', error);
     res.status(500).json({ error: 'Internal Server Error' });
