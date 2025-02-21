@@ -100,11 +100,11 @@ app.post('/analyze-image', async (req, res) => {
     return res.status(400).send('Image URL and prompt are required');
   }
 
-  const input = { image, prompt, top_p: 1, max_tokens: 1024, temperature: 0.2 };
+  const input = { image, prompt, top_p: 0.9, num_beams: 5, max_length: 4000, temperature: 1.32, max_new_tokens: 3000, repetition_penalty: 1 };
 
   try {
     const output = await replicate.run(
-      "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
+      "daanelson/minigpt-4:e447a8583cffd86ce3b93f9c2cd24f2eae603d99ace6afa94b33a08e94a3cd06",
       { input }
     );
 
