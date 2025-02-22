@@ -24,26 +24,11 @@ app.post('/generate-image', async (req, res) => {
     return res.status(400).send('Prompt is required');
   }
 
-  const input = {
-    image: "https://example.com/out-0.png",
-    width: 1024,
-    height: 680,
-    prompt,
-    refine: "expert_ensemble_refiner",
-    scheduler: "K_EULER",
-    lora_scale: 0.6,
-    num_outputs: 1,
-    guidance_scale: 7.5,
-    apply_watermark: true,
-    high_noise_frac: 0.8,
-    negative_prompt: "borders, frames, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face",
-    prompt_strength: 0.8,
-    num_inference_steps: 400
-  };
+  const input = { prompt };
 
   try {
     const output = await replicate.run(
-      "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
+      "stability-ai/stable-diffusion-3.5-large",
       { input }
     );
 
@@ -115,16 +100,7 @@ app.post('/analyze-image', async (req, res) => {
     return res.status(400).send('Image URL and prompt are required');
   }
 
-  const input = {
-    image,
-    prompt,
-    top_p: 0.9,
-    num_beams: 5,
-    max_length: 4000,
-    temperature: 1.32,
-    max_new_tokens: 3000,
-    repetition_penalty: 1
-  };
+  const input = { image, prompt, top_p: 0.9, num_beams: 5, max_length: 4000, temperature: 1.32, max_new_tokens: 3000, repetition_penalty: 1 };
 
   try {
     const output = await replicate.run(
