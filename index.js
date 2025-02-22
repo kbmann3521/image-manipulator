@@ -23,7 +23,7 @@ app.post('/generate-image', async (req, res) => {
   }
 
   const input = {
-    image,
+    image: "https://storage-pull.b-cdn.net/Media/Categories/Oceanic/out-0.png",
     width: 768,
     height: 768,
     prompt,
