@@ -18,27 +18,19 @@ app.use(express.json());
 
 // Endpoint to generate an image
 app.post('/generate-image', async (req, res) => {
-  const { image, prompt } = req.body;
+  const { prompt } = req.body;
 
-  if (!image || !prompt) {
-    return res.status(400).send('Image URL and prompt are required');
+  if (!prompt) {
+    return res.status(400).send('Prompt is required');
   }
 
   const input = {
-    image,
-    width: 1024,
-    height: 680,
+    width: 768,
+    height: 768,
     prompt,
     refine: "expert_ensemble_refiner",
-    scheduler: "K_EULER",
-    lora_scale: 0.6,
-    num_outputs: 1,
-    guidance_scale: 7.5,
-    apply_watermark: true,
-    high_noise_frac: 0.8,
-    negative_prompt: "borders, frames, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face",
-    prompt_strength: 0.8,
-    num_inference_steps: 400
+    apply_watermark: false,
+    num_inference_steps: 25
   };
 
   try {
