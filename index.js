@@ -23,7 +23,7 @@ app.post('/generate-image', async (req, res) => {
   }
 
   const input = {
-    image:,
+    image,
     width: 768,
     height: 768,
     prompt,
