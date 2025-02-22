@@ -8,10 +8,8 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Initialize Replicate with API key from environment variable
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY,
-});
+// Initialize Replicate
+const replicate = new Replicate();
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -24,11 +22,18 @@ app.post('/generate-image', async (req, res) => {
     return res.status(400).send('Prompt is required');
   }
 
-  const input = { prompt };
+  const input = {
+    width: 768,
+    height: 768,
+    prompt,
+    refine: "expert_ensemble_refiner",
+    apply_watermark: false,
+    num_inference_steps: 25
+  };
 
   try {
     const output = await replicate.run(
-      "stability-ai/stable-diffusion-3.5-large",
+      "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
       { input }
     );
 
@@ -37,13 +42,13 @@ app.post('/generate-image', async (req, res) => {
     }
 
     // Save the first generated image to disk
-    const filePath = path.join(__dirname, 'output_0.webp');
+    const filePath = path.join(__dirname, 'output_0.png');
     await writeFile(filePath, output[0]);
 
     console.log("Generated image saved:", filePath);
 
     // Send the image file as response
-    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Content-Type', 'image/png');
     res.sendFile(filePath);
   } catch (error) {
     console.error('Error generating image:', error);
@@ -92,7 +97,7 @@ app.post('/upscale-image', async (req, res) => {
   }
 });
 
-// New endpoint to analyze an image
+// Endpoint to analyze an image
 app.post('/analyze-image', async (req, res) => {
   const { image, prompt } = req.body;
 
