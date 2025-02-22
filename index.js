@@ -18,17 +18,32 @@ app.use(express.json());
 
 // Endpoint to generate an image
 app.post('/generate-image', async (req, res) => {
-  const { prompt } = req.body;
+  const { image, prompt } = req.body;
 
-  if (!prompt) {
-    return res.status(400).send('Prompt is required');
+  if (!image || !prompt) {
+    return res.status(400).send('Image URL and prompt are required');
   }
 
-  const input = { prompt };
+  const input = {
+    image,
+    width: 1024,
+    height: 680,
+    prompt,
+    refine: "expert_ensemble_refiner",
+    scheduler: "K_EULER",
+    lora_scale: 0.6,
+    num_outputs: 1,
+    guidance_scale: 7.5,
+    apply_watermark: true,
+    high_noise_frac: 0.8,
+    negative_prompt: "borders, frames, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face",
+    prompt_strength: 0.8,
+    num_inference_steps: 400
+  };
 
   try {
     const output = await replicate.run(
-      "stability-ai/stable-diffusion-3.5-large",
+      "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
       { input }
     );
 
@@ -37,13 +52,13 @@ app.post('/generate-image', async (req, res) => {
     }
 
     // Save the first generated image to disk
-    const filePath = path.join(__dirname, 'output_0.webp');
+    const filePath = path.join(__dirname, 'output_0.png');
     await writeFile(filePath, output[0]);
 
     console.log("Generated image saved:", filePath);
 
     // Send the image file as response
-    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Content-Type', 'image/png');
     res.sendFile(filePath);
   } catch (error) {
     console.error('Error generating image:', error);
