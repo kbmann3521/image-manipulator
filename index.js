@@ -25,8 +25,8 @@ app.post('/generate-image', async (req, res) => {
   }
 
   const input = {
-    width,
-    height,
+    width: 540,
+    height: 340,
     prompt,
     refine: "expert_ensemble_refiner",
     apply_watermark: false,
