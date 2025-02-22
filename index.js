@@ -18,14 +18,14 @@ app.use(express.json());
 
 // Endpoint to generate an image
 app.post('/generate-image', async (req, res) => {
-  const { image, prompt } = req.body;
+  const { prompt } = req.body;
 
-  if (!image || !prompt) {
-    return res.status(400).send('Image URL and prompt are required');
+  if (!prompt) {
+    return res.status(400).send('Prompt is required');
   }
 
   const input = {
-    image,
+    image: "https://example.com/out-0.png",
     width: 1024,
     height: 680,
     prompt,
@@ -52,13 +52,13 @@ app.post('/generate-image', async (req, res) => {
     }
 
     // Save the first generated image to disk
-    const filePath = path.join(__dirname, 'output_0.png');
+    const filePath = path.join(__dirname, 'output_0.webp');
     await writeFile(filePath, output[0]);
 
     console.log("Generated image saved:", filePath);
 
     // Send the image file as response
-    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Type', 'image/webp');
     res.sendFile(filePath);
   } catch (error) {
     console.error('Error generating image:', error);
@@ -115,7 +115,16 @@ app.post('/analyze-image', async (req, res) => {
     return res.status(400).send('Image URL and prompt are required');
   }
 
-  const input = { image, prompt, top_p: 0.9, num_beams: 5, max_length: 4000, temperature: 1.32, max_new_tokens: 3000, repetition_penalty: 1 };
+  const input = {
+    image,
+    prompt,
+    top_p: 0.9,
+    num_beams: 5,
+    max_length: 4000,
+    temperature: 1.32,
+    max_new_tokens: 3000,
+    repetition_penalty: 1
+  };
 
   try {
     const output = await replicate.run(
