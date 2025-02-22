@@ -22,14 +22,22 @@ app.post('/generate-image', async (req, res) => {
     return res.status(400).send('Prompt is required');
   }
 
-  const input = {
-    width: 768,
-    height: 768,
-    prompt,
-    refine: "expert_ensemble_refiner",
-    apply_watermark: false,
-    num_inference_steps: 25
-  };
+  const input: {
+      image: "https://example.com/out-0.png",
+      width: 768,
+      height: 768,
+      prompt: "a field of flowers overlooking an ocean",
+      refine: "expert_ensemble_refiner",
+      scheduler: "K_EULER",
+      lora_scale: 0.6,
+      num_outputs: 1,
+      guidance_scale: 7.5,
+      apply_watermark: false,
+      high_noise_frac: 0.8,
+      negative_prompt: "",
+      prompt_strength: 0.8,
+      num_inference_steps: 25
+    };
 
   try {
     const output = await replicate.run(
